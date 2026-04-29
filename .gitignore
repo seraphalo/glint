@@ -1,0 +1,14 @@
+build/
+*.o
+*.obj
+*.a
+*.dylib
+*.so
+*.dSYM/
+.cache/
+compile_commands.json
+.DS_Store
+.vscode/
+.idea/
+
+.claude/settings.local.json
