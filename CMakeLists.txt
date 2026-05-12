@@ -12,6 +12,7 @@ endif()
 
 add_executable(glint
     src/main.cpp
+    src/rasterizer/framebuffer.cpp
 )
 
 # Homebrew on Apple Silicon

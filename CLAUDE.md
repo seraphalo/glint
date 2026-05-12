@@ -31,9 +31,51 @@ glint/
 
 (Layout will evolve as the project grows — update this section when it does.)
 
+## Phases
+
+**Phase 1 — Minimal Rasterizer (C++ only, no LLVM)**
+- Framebuffer (pixel array in memory)
+- Triangle rasterization (edge function or barycentric coordinates)
+- Z-buffer (depth testing)
+- Output via SDL2
+- Hardcoded Phong lighting as a placeholder shader
+
+**Phase 2 — Shading Language Design (no code, design decisions only)**
+- Define vertex/fragment shader interface
+- Built-in types: `vec2`, `vec3`, `vec4`, `float`
+- Built-in functions: `dot`, `normalize`, `clamp`, `mix`
+- Control flow: `if`, `for`
+
+**Phase 3 — Frontend: Lexer + Parser**
+- Lexer: tokenize source into keywords, identifiers, literals, operators
+- Parser: recursive descent, produces an AST
+- AST nodes: `BinaryExpr`, `CallExpr`, `VarDecl`, `Block`, etc.
+- Pure C++, no LLVM dependency
+
+**Phase 4 — Backend: LLVM IR Generation**
+- Walk the AST and emit LLVM IR using `IRBuilder`
+- Map `vec3` etc. to LLVM vector types (`<3 x float>`)
+- Map built-in functions to LLVM intrinsics or hand-written helpers
+
+**Phase 5 — JIT Execution**
+- Compile IR to machine code using LLVM ORC JIT
+- Expose shader as a function pointer: `void(*)(FragmentInput*, FragmentOutput*)`
+- Rasterizer calls this per-pixel, replacing the hardcoded Phong shader
+
 ## Build
 
-TBD — will use CMake once sources exist. Expected: `cmake -B build && cmake --build build`.
+`cmake -B build && cmake --build build`
+
+## Naming conventions
+
+| Thing | Convention | Example |
+|---|---|---|
+| Classes / structs | `PascalCase` | `Framebuffer`, `BinaryExpr` |
+| Functions / methods | `camelCase` | `setPixel()`, `clear()` |
+| Local variables | `camelCase` | `pixelColor`, `edgeVal` |
+| Member variables | `camelCase` + `_` suffix | `width_`, `pixels_` |
+| Constants | `kPascalCase` | `kWidth`, `kMaxDepth` |
+| Files | `snake_case` | `framebuffer.h`, `lexer.cpp` |
 
 ## Working style
 
