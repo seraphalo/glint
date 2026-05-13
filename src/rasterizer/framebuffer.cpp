@@ -8,9 +8,9 @@ void Framebuffer::clear(uint32_t color) {
         *it = color;
 }
 
-void Framebuffer::setPixel(int x, int y, uint32_t color) {
-    assert(x >= 0 && x < width_ && y >= 0 && y < height_);
-    pixels_[y * width_ + x] = color;
+void Framebuffer::setPixel(Vec2 pos, uint32_t color) {
+    assert(pos.x >= 0 && pos.x < width_ && pos.y >= 0 && pos.y < height_);
+    pixels_[pos.y * width_ + pos.x] = color;
 }
 
 const uint32_t* Framebuffer::data() const{
