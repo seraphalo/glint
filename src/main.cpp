@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "rasterizer/framebuffer.h"
+#include "rasterizer/triangle.h"
 
 int main(int /*argc*/, char** /*argv*/) {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -34,6 +35,7 @@ int main(int /*argc*/, char** /*argv*/) {
 
     Framebuffer fb(kWidth, kHeight);
     fb.clear(0xFF202030u);
+    drawTriangle(fb, 400, 100, 700, 500, 100, 500, packRGB(255, 100, 50));
 
     bool running = true;
     while (running) {

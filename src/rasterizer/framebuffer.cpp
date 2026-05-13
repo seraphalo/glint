@@ -16,3 +16,12 @@ void Framebuffer::setPixel(int x, int y, uint32_t color) {
 const uint32_t* Framebuffer::data() const{
     return pixels_.data();
 }
+
+
+int Framebuffer::width() const {
+    return width_;
+}
+
+int Framebuffer::height() const {
+    return height_;
+}

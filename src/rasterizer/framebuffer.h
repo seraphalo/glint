@@ -15,6 +15,8 @@ public:
     void clear(uint32_t color);
     void setPixel(int x, int y, uint32_t color);
     const uint32_t* data() const;
+    int width() const;
+    int height() const;
     
 
 

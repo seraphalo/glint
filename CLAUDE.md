@@ -71,9 +71,10 @@ glint/
 | Thing | Convention | Example |
 |---|---|---|
 | Classes / structs | `PascalCase` | `Framebuffer`, `BinaryExpr` |
-| Functions / methods | `camelCase` | `setPixel()`, `clear()` |
-| Local variables | `camelCase` | `pixelColor`, `edgeVal` |
-| Member variables | `camelCase` + `_` suffix | `width_`, `pixels_` |
+| Methods | `camelCase` | `setPixel()`, `clear()` |
+| Free functions | `camelCase` | `drawTriangle()`, `packRGB()` |
+| Local variables | `snake_case` | `pixel_color`, `edge_val` |
+| Member variables | `snake_case` + `_` suffix | `width_`, `pixels_` |
 | Constants | `kPascalCase` | `kWidth`, `kMaxDepth` |
 | Files | `snake_case` | `framebuffer.h`, `lexer.cpp` |
 
