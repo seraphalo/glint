@@ -13,9 +13,9 @@ struct EdgeVals
 };
 
 void drawTriangle(Framebuffer &fb,
-                  Vec2 v0, uint32_t c0,
-                  Vec2 v1, uint32_t c1,
-                  Vec2 v2, uint32_t c2)
+                  Vec2 v0, float z0, uint32_t c0,
+                  Vec2 v1, float z1, uint32_t c1,
+                  Vec2 v2, float z2, uint32_t c2)
 {
     // Bounding box, clamped to framebuffer dimensions
     int min_x = std::max(std::min({v0.x, v1.x, v2.x}), 0);
@@ -58,7 +58,8 @@ void drawTriangle(Framebuffer &fb,
                 uint8_t r = static_cast<uint8_t>(interpolate(w0, w1, w2, r0, r1, r2));
                 uint8_t g = static_cast<uint8_t>(interpolate(w0, w1, w2, g0, g1, g2));
                 uint8_t b = static_cast<uint8_t>(interpolate(w0, w1, w2, b0, b1, b2));
-                fb.setPixel({x, y}, packRGB(r, g, b));
+                float z = interpolate(w0, w1, w2, z0, z1, z2);
+                fb.setPixel({x, y}, z, packRGB(r, g, b));
             }
         }
     }

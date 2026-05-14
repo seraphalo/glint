@@ -38,10 +38,17 @@ int main(int /*argc*/, char ** /*argv*/)
 
     Framebuffer fb(kWidth, kHeight);
     fb.clear(0xFF202030u);
+    fb.clearDepth();
+
     drawTriangle(fb,
-                 Vec2{400, 100}, packRGB(255, 0, 0),
-                 Vec2{700, 500}, packRGB(0, 255, 0),
-                 Vec2{100, 500}, packRGB(0, 0, 255));
+                 Vec2{100, 100}, 0.2f, packRGB(255, 0, 0),
+                 Vec2{500, 100}, 0.2f, packRGB(255, 0, 0),
+                 Vec2{300, 400}, 0.2f, packRGB(255, 0, 0));
+
+    drawTriangle(fb,
+                 Vec2{200, 50}, 0.8f, packRGB(0, 0, 255),
+                 Vec2{600, 300}, 0.8f, packRGB(0, 0, 255),
+                 Vec2{150, 400}, 0.8f, packRGB(0, 0, 255));
 
     bool running = true;
     while (running)
