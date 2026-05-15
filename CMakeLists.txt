@@ -14,6 +14,9 @@ add_executable(glint
     src/main.cpp
     src/rasterizer/framebuffer.cpp
     src/rasterizer/triangle.cpp
+    src/rasterizer/vec.cpp
+    src/rasterizer/mat4.cpp
+    src/rasterizer/pipeline.cpp
 )
 
 # Homebrew on Apple Silicon

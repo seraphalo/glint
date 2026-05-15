@@ -6,6 +6,9 @@
 
 #include "rasterizer/framebuffer.h"
 #include "rasterizer/triangle.h"
+#include "rasterizer/mat4.h"
+#include "rasterizer/pipeline.h"
+#include "rasterizer/vec.h"
 
 int main(int /*argc*/, char ** /*argv*/)
 {
@@ -40,15 +43,38 @@ int main(int /*argc*/, char ** /*argv*/)
     fb.clear(0xFF202030u);
     fb.clearDepth();
 
-    drawTriangle(fb,
-                 Vec2{100, 100}, 0.2f, packRGB(255, 0, 0),
-                 Vec2{500, 100}, 0.2f, packRGB(255, 0, 0),
-                 Vec2{300, 400}, 0.2f, packRGB(255, 0, 0));
+    // Camera:
+    Mat4 view = lookAt({0, 0, 3}, {0, 0, 0}, {0, 1, 0});
+    Mat4 proj = perspective(M_PI / 3.0f, (float)kWidth / kHeight, 0.1f, 100.0f);
+    Mat4 mvp = proj * view;
+    // Red triangle — closer:
+    Vec3 r0 = {-0.6f, -0.4f, -0.5f};
+    Vec3 r1 = {0.6f, -0.4f, -0.5f};
+    Vec3 r2 = {0.0f, 0.6f, -0.5f};
+    // Blue triangle — further, offset to overlap:
+    Vec3 b0 = {-0.3f, -0.6f, -1.5f};
+    Vec3 b1 = {0.9f, -0.6f, -1.5f};
+    Vec3 b2 = {0.3f, 0.4f, -1.5f};
 
-    drawTriangle(fb,
-                 Vec2{200, 50}, 0.8f, packRGB(0, 0, 255),
-                 Vec2{600, 300}, 0.8f, packRGB(0, 0, 255),
-                 Vec2{150, 400}, 0.8f, packRGB(0, 0, 255));
+    auto pr0 = projectVertex(r0, mvp, kWidth, kHeight);
+    auto pr1 = projectVertex(r1, mvp, kWidth, kHeight);
+    auto pr2 = projectVertex(r2, mvp, kWidth, kHeight);
+
+    auto pb0 = projectVertex(b0, mvp, kWidth, kHeight);
+    auto pb1 = projectVertex(b1, mvp, kWidth, kHeight);
+    auto pb2 = projectVertex(b2, mvp, kWidth, kHeight);
+
+    if (!pr0.clipped && !pr1.clipped && !pr2.clipped)
+        drawTriangle(fb,
+                     pr0.screen, pr0.z, packRGB(255, 80, 80),
+                     pr1.screen, pr1.z, packRGB(255, 80, 80),
+                     pr2.screen, pr2.z, packRGB(255, 80, 80));
+
+    if (!pb0.clipped && !pb1.clipped && !pb2.clipped)
+        drawTriangle(fb,
+                     pb0.screen, pb0.z, packRGB(80, 80, 255),
+                     pb1.screen, pb1.z, packRGB(80, 80, 255),
+                     pb2.screen, pb2.z, packRGB(80, 80, 255));
 
     bool running = true;
     while (running)

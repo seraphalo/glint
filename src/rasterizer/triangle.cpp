@@ -26,6 +26,7 @@ void drawTriangle(Framebuffer &fb,
     // Signed area via shoelace formula (2x actual area, same scale as edge functions).
     // Kept signed so that weights stay positive for both CW and CCW winding.
     int area = v0.x * (v1.y - v2.y) + v1.x * (v2.y - v0.y) + v2.x * (v0.y - v1.y);
+    int sign = area > 0 ? 1 : -1;
 
     // Unpack vertex colors once outside the pixel loop
     auto [r0, g0, b0] = unpackRGB(c0);
@@ -47,7 +48,7 @@ void drawTriangle(Framebuffer &fb,
         for (int y = min_y; y <= max_y; y++)
         {
             auto vals = edge(x, y);
-            if (vals.e01 > 0 && vals.e12 > 0 && vals.e20 > 0)
+            if (vals.e01 * sign > 0 && vals.e12 * sign > 0 && vals.e20 * sign > 0)
             {
                 // Each weight is the sub-triangle opposite to that vertex,
                 // normalized by total area. Cast to float to avoid integer truncation.
