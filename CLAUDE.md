@@ -1,12 +1,12 @@
 # glint
 
-A learning project: a minimal software rasterizer in C++ that runs fragment shaders written in a small custom shading language, JIT-compiled via LLVM.
+A personal project to build a JIT-compiled shading language using LLVM, with a software rasterizer as the execution target.
 
-## Goals
+## Goals (priority order)
 
-- **Rasterizer**: framebuffer, triangle rasterization, z-buffer, SDL2 window output
-- **Shading language**: lexer → parser → AST → LLVM IR → ORC JIT
-- **Integration**: rasterizer calls JIT-compiled fragment shaders via function pointer at runtime
+1. **Compiler deep dive** — deeply understand compiler optimization through LLVM: IR generation, pass pipeline, writing custom passes, and measuring their effect
+2. **Graphics as substrate** — the rasterizer is the execution target; shader performance is how we measure optimization impact
+3. **Metal backend** — eventually compile glint shaders to MSL and run on GPU (after the compiler work is solid)
 
 This is a project for learning, not for shipping. Prefer minimal, readable code over generality or performance.
 
@@ -15,6 +15,7 @@ This is a project for learning, not for shipping. Prefer minimal, readable code 
 - C++17
 - LLVM 17 (Core, ORC JIT, IRBuilder)
 - SDL2 (window + framebuffer blit)
+- Metal / MSL (future, Phase 4B)
 
 ## Planned layout
 
@@ -34,11 +35,19 @@ glint/
 ## Phases
 
 **Phase 1 — Minimal Rasterizer (C++ only, no LLVM)**
+
+Done:
 - Framebuffer (pixel array in memory)
-- Triangle rasterization (edge function or barycentric coordinates)
+- Triangle rasterization (edge functions + barycentric coordinates)
 - Z-buffer (depth testing)
-- Output via SDL2
+- SDL2 output + interactive render loop
+- 3D pipeline: Vec3/Vec4, Mat4, MVP transforms, perspective projection
+- Mouse-driven rotation
+
+Remaining:
 - Hardcoded Phong lighting as a placeholder shader
+- Perspective-correct interpolation
+- Back-face culling
 
 **Phase 2 — Shading Language Design (no code, design decisions only)**
 - Define vertex/fragment shader interface
@@ -52,15 +61,36 @@ glint/
 - AST nodes: `BinaryExpr`, `CallExpr`, `VarDecl`, `Block`, etc.
 - Pure C++, no LLVM dependency
 
-**Phase 4 — Backend: LLVM IR Generation**
+**Phase 4A — Backend: LLVM IR → ORC JIT**
 - Walk the AST and emit LLVM IR using `IRBuilder`
 - Map `vec3` etc. to LLVM vector types (`<3 x float>`)
 - Map built-in functions to LLVM intrinsics or hand-written helpers
-
-**Phase 5 — JIT Execution**
 - Compile IR to machine code using LLVM ORC JIT
 - Expose shader as a function pointer: `void(*)(FragmentInput*, FragmentOutput*)`
 - Rasterizer calls this per-pixel, replacing the hardcoded Phong shader
+
+**Phase 4B — Metal Backend (later)**
+- AST → MSL source
+- Compile and run via Metal API
+- Compare GPU vs CPU shader performance
+
+**Phase 5 — LLVM Optimization Experiments**
+- Write custom LLVM passes
+- Benchmark against `-O0` / `-O2`
+- Measure optimization impact on per-pixel shader throughput
+
+**Phase 6 — Ray Tracer**
+- Replace rasterizer with a ray tracer as the execution target
+- More complex per-pixel computation = richer target for compiler optimization experiments
+- Compare optimization impact on ray tracing vs rasterization workloads
+
+## Ideas to explore
+
+- **Cook-Torrance BRDF** — replace Phong with a physically-based reflectance model
+- **Shadow maps** — render scene from light's POV to get a depth buffer, use it to determine shadowed pixels
+- **SSAO** — screen-space ambient occlusion as a post-process pass
+- **Hardware ray tracing** — hybrid rasterization + limited ray tracing (shadows or reflections only)
+- **Bezier curves / patches** — prerequisite for rendering the Utah teapot (defined as bicubic Bezier patches)
 
 ## Build
 
@@ -80,6 +110,9 @@ glint/
 
 ## Working style
 
-- One concern at a time. Get the rasterizer drawing a triangle before touching the shading language; get the language compiling a constant-color shader before adding features.
+- One concern at a time. Finish Phase 1 before touching the shading language; get a constant-color shader JIT-compiling before adding optimization passes.
 - No premature abstractions. Three similar lines beats a templated helper.
-- When stuck, the goal is to understand, not just to make it compile. Prefer a short explanation of the underlying concept (e.g. edge functions, SSA, ORC layers) over a black-box fix.
+- When stuck, analyze the problem and suggest a concrete next step — don't just make it compile.
+- When relevant, explain what's happening at the IR or machine code level.
+- Prefer minimal, readable implementations — no over-engineering.
+- Don't rewrite things that weren't asked about.

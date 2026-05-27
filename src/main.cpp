@@ -46,15 +46,18 @@ int main(int /*argc*/, char ** /*argv*/)
 
     // Red triangle — closer
     Vec3 r0 = {-0.6f, -0.4f, -0.5f};
-    Vec3 r1 = { 0.6f, -0.4f, -0.5f};
-    Vec3 r2 = { 0.0f,  0.6f, -0.5f};
+    Vec3 r1 = {0.6f, -0.4f, -0.5f};
+    Vec3 r2 = {0.0f, 0.6f, -0.5f};
 
     // Blue triangle — further, offset to overlap
     Vec3 b0 = {-0.3f, -0.6f, -1.5f};
-    Vec3 b1 = { 0.9f, -0.6f, -1.5f};
-    Vec3 b2 = { 0.3f,  0.4f, -1.5f};
+    Vec3 b1 = {0.9f, -0.6f, -1.5f};
+    Vec3 b2 = {0.3f, 0.4f, -1.5f};
 
     float yaw = 0.0f;
+
+    Vec3 light_dir = Vec3{0, 1, 1}; // from above-right
+    light_dir = light_dir.normalize();
 
     bool running = true;
     while (running)
@@ -85,17 +88,24 @@ int main(int /*argc*/, char ** /*argv*/)
         auto pb1 = projectVertex(b1, mvp, kWidth, kHeight);
         auto pb2 = projectVertex(b2, mvp, kWidth, kHeight);
 
+        Vec4 front_normal_vec4 = {0, 0, 1, 0};
+        front_normal_vec4 = model * front_normal_vec4;
+        Vec3 front_normal = {front_normal_vec4.x, front_normal_vec4.y, front_normal_vec4.z};
+        front_normal = front_normal.normalize();
+
         if (!pr0.clipped && !pr1.clipped && !pr2.clipped)
             drawTriangle(fb,
-                         pr0.screen, pr0.z, packRGB(255, 80, 80),
-                         pr1.screen, pr1.z, packRGB(255, 80, 80),
-                         pr2.screen, pr2.z, packRGB(255, 80, 80));
+                         pr0.screen, pr0.z, front_normal, packRGB(255, 80, 80),
+                         pr1.screen, pr1.z, front_normal, packRGB(255, 80, 80),
+                         pr2.screen, pr2.z, front_normal, packRGB(255, 80, 80),
+                         light_dir);
 
         if (!pb0.clipped && !pb1.clipped && !pb2.clipped)
             drawTriangle(fb,
-                         pb0.screen, pb0.z, packRGB(80, 80, 255),
-                         pb1.screen, pb1.z, packRGB(80, 80, 255),
-                         pb2.screen, pb2.z, packRGB(80, 80, 255));
+                         pb0.screen, pb0.z, front_normal, packRGB(80, 80, 255),
+                         pb1.screen, pb1.z, front_normal, packRGB(80, 80, 255),
+                         pb2.screen, pb2.z, front_normal, packRGB(80, 80, 255),
+                         light_dir);
 
         SDL_UpdateTexture(texture, nullptr, fb.data(), kWidth * sizeof(uint32_t));
         SDL_RenderClear(renderer);

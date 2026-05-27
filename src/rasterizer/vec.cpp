@@ -20,6 +20,15 @@ Vec3 Vec3::operator-(const Vec3 &o) const
     return result;
 }
 
+Vec3 Vec3::operator*(const float k) const
+{
+    Vec3 result;
+    result.x = x * k;
+    result.y = y * k;
+    result.z = z * k;
+    return result;
+}
+
 Vec3 Vec3::cross(const Vec3 &o) const
 {
     Vec3 result;
