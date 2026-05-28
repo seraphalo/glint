@@ -1,13 +1,61 @@
 #include <SDL2/SDL.h>
 
+#include <array>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <vector>
 
 #include "rasterizer/framebuffer.h"
 #include "rasterizer/mat4.h"
 #include "rasterizer/pipeline.h"
 #include "rasterizer/triangle.h"
 #include "rasterizer/vec.h"
+
+struct Sphere
+{
+    // Object-space positions; for a unit sphere these double as object-space normals.
+    std::vector<Vec3> vertices;
+    std::vector<std::array<int, 3>> triangles;
+};
+
+Sphere generateSphere(int stacks, int slices)
+{
+    Sphere sphere;
+
+    // (stacks+1) x (slices+1) grid of vertices in object space.
+    for (int i = 0; i <= stacks; i++)
+    {
+        float theta = M_PI * i / stacks; // 0 = north pole, π = south pole
+        float sin_t = std::sin(theta);
+        float cos_t = std::cos(theta);
+        for (int j = 0; j <= slices; j++)
+        {
+            float phi = 2.0f * M_PI * j / slices; // 0 → 2π around the equator
+            float x = sin_t * std::cos(phi);
+            float y = cos_t;
+            float z = sin_t * std::sin(phi);
+            sphere.vertices.push_back({x, y, z});
+        }
+    }
+
+    // Two triangles per grid quad.
+    int stride = slices + 1;
+    for (int i = 0; i < stacks; i++)
+    {
+        for (int j = 0; j < slices; j++)
+        {
+            int a = i * stride + j;
+            int b = (i + 1) * stride + j;
+            int c = i * stride + (j + 1);
+            int d = (i + 1) * stride + (j + 1);
+            sphere.triangles.push_back({a, b, c});
+            sphere.triangles.push_back({b, d, c});
+        }
+    }
+
+    return sphere;
+}
 
 int main(int /*argc*/, char ** /*argv*/)
 {
@@ -44,15 +92,7 @@ int main(int /*argc*/, char ** /*argv*/)
     Mat4 view = lookAt({0, 0, 3}, {0, 0, 0}, {0, 1, 0});
     Mat4 proj = perspective(M_PI / 3.0f, (float)kWidth / kHeight, 0.1f, 100.0f);
 
-    // Red triangle — closer
-    Vec3 r0 = {-0.6f, -0.4f, -0.5f};
-    Vec3 r1 = {0.6f, -0.4f, -0.5f};
-    Vec3 r2 = {0.0f, 0.6f, -0.5f};
-
-    // Blue triangle — further, offset to overlap
-    Vec3 b0 = {-0.3f, -0.6f, -1.5f};
-    Vec3 b1 = {0.9f, -0.6f, -1.5f};
-    Vec3 b2 = {0.3f, 0.4f, -1.5f};
+    Sphere sphere = generateSphere(16, 32);
 
     float yaw = 0.0f;
 
@@ -80,32 +120,36 @@ int main(int /*argc*/, char ** /*argv*/)
         Mat4 model = rotateY(yaw);
         Mat4 mvp = proj * view * model;
 
-        auto pr0 = projectVertex(r0, mvp, kWidth, kHeight);
-        auto pr1 = projectVertex(r1, mvp, kWidth, kHeight);
-        auto pr2 = projectVertex(r2, mvp, kWidth, kHeight);
+        // Precompute world-space normals and projected vertices once per vertex,
+        // so shared vertices aren't transformed multiple times across triangles.
+        std::vector<Vec3> world_normals;
+        std::vector<ProjectedVertex> projected;
+        world_normals.reserve(sphere.vertices.size());
+        projected.reserve(sphere.vertices.size());
+        for (const Vec3 &v : sphere.vertices)
+        {
+            // w = 0: normals are directions, not points — translation must not affect them.
+            Vec4 n4 = {v.x, v.y, v.z, 0};
+            n4 = model * n4;
+            world_normals.push_back(Vec3{n4.x, n4.y, n4.z}.normalize());
+            projected.push_back(projectVertex(v, mvp, kWidth, kHeight));
+        }
 
-        auto pb0 = projectVertex(b0, mvp, kWidth, kHeight);
-        auto pb1 = projectVertex(b1, mvp, kWidth, kHeight);
-        auto pb2 = projectVertex(b2, mvp, kWidth, kHeight);
+        constexpr uint32_t sphere_color = packRGB(200, 200, 220);
+        for (const auto &tri : sphere.triangles)
+        {
+            const ProjectedVertex &p0 = projected[tri[0]];
+            const ProjectedVertex &p1 = projected[tri[1]];
+            const ProjectedVertex &p2 = projected[tri[2]];
+            if (p0.clipped || p1.clipped || p2.clipped)
+                continue;
 
-        Vec4 front_normal_vec4 = {0, 0, 1, 0};
-        front_normal_vec4 = model * front_normal_vec4;
-        Vec3 front_normal = {front_normal_vec4.x, front_normal_vec4.y, front_normal_vec4.z};
-        front_normal = front_normal.normalize();
-
-        if (!pr0.clipped && !pr1.clipped && !pr2.clipped)
             drawTriangle(fb,
-                         pr0.screen, pr0.z, front_normal, packRGB(255, 80, 80),
-                         pr1.screen, pr1.z, front_normal, packRGB(255, 80, 80),
-                         pr2.screen, pr2.z, front_normal, packRGB(255, 80, 80),
+                         p0, world_normals[tri[0]], sphere_color,
+                         p1, world_normals[tri[1]], sphere_color,
+                         p2, world_normals[tri[2]], sphere_color,
                          light_dir);
-
-        if (!pb0.clipped && !pb1.clipped && !pb2.clipped)
-            drawTriangle(fb,
-                         pb0.screen, pb0.z, front_normal, packRGB(80, 80, 255),
-                         pb1.screen, pb1.z, front_normal, packRGB(80, 80, 255),
-                         pb2.screen, pb2.z, front_normal, packRGB(80, 80, 255),
-                         light_dir);
+        }
 
         SDL_UpdateTexture(texture, nullptr, fb.data(), kWidth * sizeof(uint32_t));
         SDL_RenderClear(renderer);

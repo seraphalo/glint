@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cassert>
 
 #include "vec.h"
 
@@ -27,6 +28,12 @@ Vec3 Vec3::operator*(const float k) const
     result.y = y * k;
     result.z = z * k;
     return result;
+}
+
+Vec3 Vec3::operator/(const float k) const
+{
+    assert(k != 0);
+    return *this * (1.f / k);
 }
 
 Vec3 Vec3::cross(const Vec3 &o) const

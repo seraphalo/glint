@@ -15,11 +15,11 @@ void Framebuffer::clearDepth()
     std::fill(depth_.begin(), depth_.end(), 1.0f);
 }
 
-void Framebuffer::setPixel(Vec2 pos, float z, uint32_t color)
+void Framebuffer::setPixel(int x, int y, float z, uint32_t color)
 {
-    assert(pos.x >= 0 && pos.x < width_ && pos.y >= 0 && pos.y < height_);
+    assert(x >= 0 && x < width_ && y >= 0 && y < height_);
     assert(z <= 1 && z >= 0);
-    int ind = pos.y * width_ + pos.x;
+    int ind = y * width_ + x;
     if (z < depth_[ind])
     {
         depth_[ind] = z;

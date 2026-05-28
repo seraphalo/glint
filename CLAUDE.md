@@ -91,6 +91,9 @@ Remaining:
 - **SSAO** — screen-space ambient occlusion as a post-process pass
 - **Hardware ray tracing** — hybrid rasterization + limited ray tracing (shadows or reflections only)
 - **Bezier curves / patches** — prerequisite for rendering the Utah teapot (defined as bicubic Bezier patches)
+- **Top-left rule for triangle edges** — replace strict edge test with top-left rule so each pixel on a shared edge is claimed by exactly one triangle
+- **Fixed-point rasterization** — replace float screen coordinates with fixed-point (e.g. 24.8) for sub-pixel precision with exact integer edge math, matching how real GPUs do it
+- **UV sphere pole fans** — replace the quad strip at the poles with triangle fans to eliminate degenerate/sliver triangles at the source
 
 ## Build
 

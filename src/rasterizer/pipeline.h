@@ -8,6 +8,7 @@ struct ProjectedVertex
 {
     Vec2 screen;
     float z;
+    float inv_w;
     bool clipped;
 };
 

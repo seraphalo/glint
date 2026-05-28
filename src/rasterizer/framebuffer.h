@@ -44,7 +44,7 @@ public:
     Framebuffer(int width, int height);
     void clear(uint32_t color);
     void clearDepth();
-    void setPixel(Vec2 pos, float z, uint32_t color);
+    void setPixel(int x, int y, float z, uint32_t color);
     const uint32_t *data() const;
     int width() const;
     int height() const;
