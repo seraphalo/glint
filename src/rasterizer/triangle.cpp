@@ -18,6 +18,33 @@ Vec3 interpolate(float weight0, float weight1, float weight2, Vec3 vec0, Vec3 ve
     return vec0 * weight0 + vec1 * weight1 + vec2 * weight2;
 }
 
+// Placeholder fragment shader. Phase 4A will replace this with a JIT-compiled function
+// driven by user-written shader source; for now it's a hardcoded Phong model.
+// View direction is approximated as {0, 0, 1} — see note in CLAUDE.md.
+Vec3 phongShade(Vec3 normal, Vec3 albedo, Vec3 light_dir)
+{
+    Vec3 n = normal.normalize();
+    float n_l_dot = n.dot(light_dir);
+    float d_factor = k_d * std::max(0.f, n_l_dot);
+    Vec3 R = n * 2 * n_l_dot - light_dir;
+    float s_factor = k_s * std::pow(std::max(0.f, R.dot({0, 0, 1})), shininess);
+
+    Vec3 light = unpackRGBf(light_color);
+    // Albedo modulates ambient + diffuse; specular reflects light color directly.
+    float ambient_diffuse = k_a + d_factor;
+    Vec3 color = {
+        albedo.x * ambient_diffuse * light.x + s_factor * light.x,
+        albedo.y * ambient_diffuse * light.y + s_factor * light.y,
+        albedo.z * ambient_diffuse * light.z + s_factor * light.z,
+    };
+
+    return {
+        std::clamp(color.x, 0.f, 1.f),
+        std::clamp(color.y, 0.f, 1.f),
+        std::clamp(color.z, 0.f, 1.f),
+    };
+}
+
 struct EdgeVals
 {
     float e01, e12, e20;
@@ -46,12 +73,9 @@ void drawTriangle(Framebuffer &fb,
         return;
     int sign = area > 0 ? 1 : -1;
 
-    // Unpack vertex colors once outside the pixel loop
-    auto [r0, g0, b0] = unpackRGBf(c0);
-    auto [r1, g1, b1] = unpackRGBf(c1);
-    auto [r2, g2, b2] = unpackRGBf(c2);
-
-    auto [light_r, light_g, light_b] = unpackRGBf(light_color);
+    Vec3 albedo0 = unpackRGBf(c0);
+    Vec3 albedo1 = unpackRGBf(c1);
+    Vec3 albedo2 = unpackRGBf(c2);
 
     // Each edge function returns twice the signed area of the sub-triangle
     // formed by that edge and P. All three positive means P is inside.
@@ -73,58 +97,30 @@ void drawTriangle(Framebuffer &fb,
             auto vals = edge(x, y);
             // >= 0 (not > 0) so pixels exactly on a shared edge get drawn by both
             // triangles — prevents visible cracks. The proper fix is the top-left rule.
-            if (vals.e01 * sign >= 0 && vals.e12 * sign >= 0 && vals.e20 * sign >= 0)
-            {
-                // Each weight is the sub-triangle opposite to that vertex,
-                // normalized by total area. Cast to float to avoid integer truncation.
-                auto weight2 = static_cast<float>(vals.e01) / area; // opposite v2
-                auto weight0 = static_cast<float>(vals.e12) / area; // opposite v0
-                auto weight1 = static_cast<float>(vals.e20) / area; // opposite v1
+            if (!(vals.e01 * sign >= 0 && vals.e12 * sign >= 0 && vals.e20 * sign >= 0))
+                continue;
 
-                // Perspective-correct interpolation: screen-space barycentric weights are
-                // distorted by perspective, so for world-space quantities (normals, colors)
-                // we interpolate (attr * 1/w) and divide by interpolated 1/w to undo the distortion.
-                float inv_w_interp = interpolate(weight0, weight1, weight2, p0.inv_w, p1.inv_w, p2.inv_w);
+            // Barycentric weights from sub-triangle areas (each weight opposite to its vertex).
+            float weight2 = vals.e01 / area;
+            float weight0 = vals.e12 / area;
+            float weight1 = vals.e20 / area;
 
-                float surface_r = interpolate(weight0 * p0.inv_w, weight1 * p1.inv_w, weight2 * p2.inv_w,
-                                              r0, r1, r2) /
-                                  inv_w_interp;
-                float surface_g = interpolate(weight0 * p0.inv_w, weight1 * p1.inv_w, weight2 * p2.inv_w,
-                                              g0, g1, g2) /
-                                  inv_w_interp;
-                float surface_b = interpolate(weight0 * p0.inv_w, weight1 * p1.inv_w, weight2 * p2.inv_w,
-                                              b0, b1, b2) /
-                                  inv_w_interp;
+            // Perspective-correct interpolation: screen-space barycentric weights are
+            // distorted by perspective, so for world-space quantities (normals, colors)
+            // we interpolate (attr * 1/w) and divide by interpolated 1/w to undo the distortion.
+            float inv_w_interp = interpolate(weight0, weight1, weight2, p0.inv_w, p1.inv_w, p2.inv_w);
+            float pw0 = weight0 * p0.inv_w;
+            float pw1 = weight1 * p1.inv_w;
+            float pw2 = weight2 * p2.inv_w;
 
-                Vec3 n_interp = interpolate(weight0 * p0.inv_w, weight1 * p1.inv_w, weight2 * p2.inv_w,
-                                            n0, n1, n2) /
-                                inv_w_interp;
+            Vec3 albedo = interpolate(pw0, pw1, pw2, albedo0, albedo1, albedo2) / inv_w_interp;
+            Vec3 normal = interpolate(pw0, pw1, pw2, n0, n1, n2) / inv_w_interp;
+            // z is already in NDC space (post-perspective-divide), which is naturally
+            // linear in screen space — no perspective correction needed here.
+            float z = interpolate(weight0, weight1, weight2, p0.z, p1.z, p2.z);
 
-                n_interp = n_interp.normalize();
-                // z is already in NDC space (post-perspective-divide), which is naturally
-                // linear in screen space — no perspective correction needed here.
-                float z_interp = interpolate(weight0, weight1, weight2, p0.z, p1.z, p2.z);
-                float n_l_dot = n_interp.dot(light_dir);
-                float d_factor = k_d * std::max(0.f, n_l_dot);
-                Vec3 R = n_interp * 2 * n_l_dot - light_dir;
-                // V approximated as {0, 0, 1}; correct V would require interpolating world-space position.
-                float s_factor = k_s * std::pow(std::max(0.f, R.dot({0, 0, 1})), shininess);
-                float r = surface_r * k_a * light_r +
-                          surface_r * d_factor * light_r +
-                          s_factor * light_r;
-                float g = surface_g * k_a * light_g +
-                          surface_g * d_factor * light_g +
-                          s_factor * light_g;
-                float b = surface_b * k_a * light_b +
-                          surface_b * d_factor * light_b +
-                          s_factor * light_b;
-
-                r = std::clamp(r, 0.f, 1.f);
-                g = std::clamp(g, 0.f, 1.f);
-                b = std::clamp(b, 0.f, 1.f);
-
-                fb.setPixel(x, y, z_interp, packRGBf({r, g, b}));
-            }
+            Vec3 color = phongShade(normal, albedo, light_dir);
+            fb.setPixel(x, y, z, packRGBf(color));
         }
     }
 }
