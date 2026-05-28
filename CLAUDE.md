@@ -43,11 +43,14 @@ Done:
 - SDL2 output + interactive render loop
 - 3D pipeline: Vec3/Vec4, Mat4, MVP transforms, perspective projection
 - Mouse-driven rotation
+- Hardcoded Phong lighting as a placeholder shader (extracted into `phongShade` — the JIT swap-in point for Phase 4A)
+- UV sphere generation + rendering
+- Perspective-correct interpolation for normals and albedo
+- Float screen coordinates for sub-pixel precision
 
 Remaining:
-- Hardcoded Phong lighting as a placeholder shader
-- Perspective-correct interpolation
 - Back-face culling
+- MSAA
 
 **Phase 2 — Shading Language Design (no code, design decisions only)**
 - Define vertex/fragment shader interface
@@ -95,6 +98,17 @@ Remaining:
 - **Fixed-point rasterization** — replace float screen coordinates with fixed-point (e.g. 24.8) for sub-pixel precision with exact integer edge math, matching how real GPUs do it
 - **UV sphere pole fans** — replace the quad strip at the poles with triangle fans to eliminate degenerate/sliver triangles at the source
 
+### GPU directions
+
+- **Metal graphics** — write a simple "draw a triangle" Metal app to learn the API; natural fit on macOS and aligns with Phase 4B
+- **Metal Compute** — non-graphics workload (matrix multiply, reduction) to learn GPGPU
+- **Vulkan** — cross-platform, low-level, lots of explicit state. Steep learning curve.
+- **WebGPU** — modern, cross-platform via Dawn or wgpu. Simpler than Vulkan.
+- **OpenGL** — legacy but easiest to get pixels on screen quickly
+- **CUDA** — Nvidia-only GPGPU; most mature ML/HPC ecosystem. Needs an Nvidia GPU or cloud rental.
+- **GPU shader IRs** — study SPIR-V (Vulkan/OpenCL), NVPTX (Nvidia, LLVM-based), AIR (Apple, LLVM-based), DXIL (D3D12). Direct bridge to the glint compiler work — could emit LLVM IR → any of these as alternative backends.
+- **Real shader compilers** — study Slang, DXC, glslang, SPIRV-Cross to see how multi-target shader compilation works in practice
+
 ## Build
 
 `cmake -B build && cmake --build build`
@@ -119,3 +133,15 @@ Remaining:
 - When relevant, explain what's happening at the IR or machine code level.
 - Prefer minimal, readable implementations — no over-engineering.
 - Don't rewrite things that weren't asked about.
+
+## DevLog Convention
+
+After resolving any non-trivial bug or technical decision, append an entry to `DEVLOG.md`:
+
+```
+## [Date] Short title
+**Symptom**: What was observed, as specifically as possible.
+**Root cause**: The actual problem.
+**Fix**: What was done to resolve it.
+**Notes**: Lessons worth remembering, or relevant file/line references.
+```
