@@ -6,6 +6,8 @@
 
 #include "vec.h"
 
+constexpr int kSampleCount = 4;
+
 constexpr uint32_t packRGB(uint8_t r, uint8_t g, uint8_t b)
 {
     return 0xFF000000u | (r << 16) | (g << 8) | b;
@@ -43,8 +45,11 @@ class Framebuffer
 public:
     Framebuffer(int width, int height);
     void clear(uint32_t color);
-    void clearDepth();
+
     void setPixel(int x, int y, float z, uint32_t color);
+    void setSample(int x, int y, int sample_idx, float z, uint32_t color);
+
+    void resolve();
     const uint32_t *data() const;
     int width() const;
     int height() const;
@@ -54,6 +59,10 @@ private:
     int height_;
     std::vector<uint32_t> pixels_;
     std::vector<float> depth_;
+    std::vector<uint32_t> samples_;
+
+    void clearDepth();
+    void clearSample(uint32_t color);
 };
 
 #endif

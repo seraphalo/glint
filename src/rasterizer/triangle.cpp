@@ -8,6 +8,13 @@ constexpr float k_s = 0.5f;
 constexpr float shininess = 32;
 constexpr uint32_t light_color = packRGB(100, 255, 100);
 
+constexpr Vec2 kSampleOffsets[kSampleCount] = {
+    {0.375f, 0.125f},
+    {0.875f, 0.375f},
+    {0.125f, 0.625f},
+    {0.625f, 0.875f},
+};
+
 float interpolate(float weight0, float weight1, float weight2, float val0, float val1, float val2)
 {
     return weight0 * val0 + weight1 * val1 + weight2 * val2;
@@ -79,7 +86,7 @@ void drawTriangle(Framebuffer &fb,
 
     // Each edge function returns twice the signed area of the sub-triangle
     // formed by that edge and P. All three positive means P is inside.
-    auto edge = [&](int p_x, int p_y)
+    auto edge = [&](float p_x, float p_y)
     {
         auto e01 = (p1.screen.x - p0.screen.x) * (p_y - p0.screen.y) -
                    (p1.screen.y - p0.screen.y) * (p_x - p0.screen.x);
@@ -94,11 +101,23 @@ void drawTriangle(Framebuffer &fb,
     {
         for (int y = min_y; y <= max_y; y++)
         {
-            auto vals = edge(x, y);
-            // >= 0 (not > 0) so pixels exactly on a shared edge get drawn by both
-            // triangles — prevents visible cracks. The proper fix is the top-left rule.
-            if (!(vals.e01 * sign >= 0 && vals.e12 * sign >= 0 && vals.e20 * sign >= 0))
+            bool coverage[kSampleCount]{};
+            bool covered = false;
+            for (size_t i = 0; i < kSampleCount; i++)
+            {
+                auto vals = edge(x + kSampleOffsets[i].x, y + kSampleOffsets[i].y);
+                // >= 0 (not > 0) so pixels exactly on a shared edge get drawn by both
+                // triangles — prevents visible cracks. The proper fix is the top-left rule.
+                if (vals.e01 * sign >= 0 && vals.e12 * sign >= 0 && vals.e20 * sign >= 0)
+                {
+                    coverage[i] = true;
+                    covered = true;
+                }
+            }
+            if (!covered)
                 continue;
+
+            auto vals = edge(x + 0.5f, y + 0.5f);
 
             // Barycentric weights from sub-triangle areas (each weight opposite to its vertex).
             float weight2 = vals.e01 / area;
@@ -120,7 +139,11 @@ void drawTriangle(Framebuffer &fb,
             float z = interpolate(weight0, weight1, weight2, p0.z, p1.z, p2.z);
 
             Vec3 color = phongShade(normal, albedo, light_dir);
-            fb.setPixel(x, y, z, packRGBf(color));
+            for (size_t i = 0; i < kSampleCount; i++)
+            {
+                if (coverage[i])
+                    fb.setSample(x, y, i, z, packRGBf(color));
+            }
         }
     }
 }

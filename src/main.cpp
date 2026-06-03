@@ -115,7 +115,6 @@ int main(int /*argc*/, char ** /*argv*/)
         }
 
         fb.clear(0xFF202030u);
-        fb.clearDepth();
 
         Mat4 model = rotateY(yaw);
         Mat4 mvp = proj * view * model;
@@ -150,6 +149,7 @@ int main(int /*argc*/, char ** /*argv*/)
                          p2, world_normals[tri[2]], sphere_color,
                          light_dir);
         }
+        fb.resolve();
 
         SDL_UpdateTexture(texture, nullptr, fb.data(), kWidth * sizeof(uint32_t));
         SDL_RenderClear(renderer);
