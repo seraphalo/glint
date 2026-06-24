@@ -109,6 +109,24 @@ Remaining:
 - **GPU shader IRs** — study SPIR-V (Vulkan/OpenCL), NVPTX (Nvidia, LLVM-based), AIR (Apple, LLVM-based), DXIL (D3D12). Direct bridge to the glint compiler work — could emit LLVM IR → any of these as alternative backends.
 - **Real shader compilers** — study Slang, DXC, glslang, SPIRV-Cross to see how multi-target shader compilation works in practice
 
+## Procedural generation track
+
+A learning track exploring procedural content generation. Two distinct entry points into the pipeline — keep them straight, because they serve the project's goals differently:
+
+- **Per-pixel (fragment stage)** — noise textures, escape-time fractals (Julia/Mandelbrot), domain warping. Computed in the per-pixel shading function over a full-screen quad. These double as **rich shader workloads**: implement now as hardcoded C++ shaders (same pattern as `phongShade`), later port to `.glint` once the language exists, and use as optimization targets in Phase 5 — far more compute-dense than Phong, so a better measure of pass impact. This entry point directly serves Goals 1 and 2.
+- **Geometry pre-pass** — generates vertices/triangles that feed the existing rasterizer. Heightmap terrain, L-system geometry. This is a **separate graphics side-track**, orthogonal to the LLVM/compiler core. Lower priority than the compiler work; pursue only when it isn't competing with it.
+
+Roadmap (ordered; for each step I implement and you review):
+
+1. Julia/Mandelbrot in the per-pixel shader, full-screen quad, color by iteration count. Validates the per-pixel path. (hardcoded C++ shader, `phongShade` pattern)
+2. value/Perlin noise + fBm (multi-octave sum), rendered as grayscale. The workhorse function.
+3. fBm as a heightmap → displace a grid → rasterize a terrain mesh. First geometry-gen step.
+4. diamond-square terrain, compared against step 3.
+5. L-system: grammar rewrite → turtle interpretation → line segments → geometry → rasterize. Focus on the branch stack `[]`.
+6. domain warping — warp noise input coords with noise, for richer detail.
+
+**Pacing**: the general collaboration norm now lives in Working style (I implement, you brief + review). One addition specific to this staged roadmap — don't reveal a step's brief until I say I'm starting that step.
+
 ## Build
 
 `cmake -B build && cmake --build build`
@@ -127,6 +145,8 @@ Remaining:
 
 ## Working style
 
+- **I write the implementation, not you.** Before I start anything non-trivial, give a short conceptual brief plus the key pitfalls, then let me implement it myself. When I'm stuck, guide with hints or questions; only show code if I explicitly ask for it.
+- Review what I write for correctness, clarity, and whether I actually understood it — review, don't rewrite.
 - One concern at a time. Finish Phase 1 before touching the shading language; get a constant-color shader JIT-compiling before adding optimization passes.
 - No premature abstractions. Three similar lines beats a templated helper.
 - When stuck, analyze the problem and suggest a concrete next step — don't just make it compile.
